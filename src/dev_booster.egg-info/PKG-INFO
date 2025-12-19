@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: dev_booster
+Version: 0.1.0
+Summary: CRUD code generator from table specs
+Author: crazyBeerDwarf
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: click>=8.1.0
+Requires-Dist: pandas>=2.0.0
+Requires-Dist: openpyxl>=3.1.0
+Requires-Dist: jinja2>=3.1.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"

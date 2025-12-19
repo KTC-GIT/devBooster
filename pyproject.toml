@@ -1,0 +1,27 @@
+[project]
+name = "dev_booster"
+version = "0.1.0"
+description = "CRUD code generator from table specs"
+authors = [{name = "crazyBeerDwarf"}]
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "click>=8.1.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    "jinja2>=3.1.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "ruff>=0.1.0"
+]
+
+[project.scripts]
+devbooster = "devbooster.cli.app:cli"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"

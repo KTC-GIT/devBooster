@@ -1,0 +1,190 @@
+"""
+Excel 파일 -> TableSpec 변환
+
+주요 기능 :
+- Excel 파일 읽기 (pandas)
+- 시트별 테이블 파싱
+- ColumnSpec 생성
+- TableSpec 생성
+"""
+
+import pandas as pd
+from pathlib import Path
+from .models import TableSpec, ColumnSpec
+
+def parse_excel(file_path: str | Path) -> list[TableSpec]:
+    """
+    Excel 파일에서 테이블 정보 추출
+
+    Args:
+        file_path: Excel 파일 경로
+
+    Example:
+        >>> tables = parse_excel("examples/tables.xlsx")
+        >>> print(tables[0].name)
+        TB_NOTICE
+
+    TODO:
+        - [] 여러 시트 동시 처리
+        - [] 에러 처리 강화
+        - [] 컬럼명 검증
+        - [] 진행률 표시
+
+    """
+    file_path = Path(file_path)
+
+    # 파일 존재 확인
+    if not file_path.exists():
+        raise FileNotFoundError(f"파일 없음: {file_path}")
+
+    # Excel 파일 열기
+    excel_file = pd.ExcelFile(file_path)
+
+    tables = []
+
+    # 각 시트 처리
+    for sheet_name in excel_file.sheet_names:
+        # TB_로 시작하는 시트만 처리
+        if not sheet_name.startswith("TB_"):
+            print(f" 건너뜀: {sheet_name}")
+            continue
+
+        print(f" 파싱 중: {sheet_name}")
+
+        # 시트 읽기
+        df = pd.read_excel(excel_file, sheet_name=sheet_name)
+
+        # TableSpec 생성
+        table = _parse_sheet(df,sheet_name)
+        tables.append(table)
+
+        print(f"✅ {sheet_name}: {len(table.columns)}개 컬럼")
+
+    return tables
+
+def _parse_sheet(df: pd.DataFrame, sheet_name: str) -> TableSpec:
+    """
+    시트 하나 -> TableSpec
+
+    Args:
+        df: pandas DataFrame
+        sheet_name: 시트명 (테이블명)
+
+    Returns:
+        TableSpec
+
+    TODO:
+        - [] 필수 컬럼 검증
+        - [] 빈 행 처리
+        - [] 중복 컬럼명 체크
+
+    """
+
+    # 필수 컬럼 확인
+    required_columns = ["컬럼명", "데이터타입", "NULL", "설명"]
+    missing = [col for col in required_columns if col not in df.columns]
+
+    if missing:
+        raise ValueError(f"{sheet_name}: 필수 컬럼 없음 = {missing}")
+
+    # 각 행 -> ColumnSpec
+    columns = []
+    for idx, row in df.iterrows():
+        try:
+            col = _parse_column(row)
+            columns.append(col)
+        except Exception as e:
+            print(f"⚠️ {sheet_name} 행 {idx+2} 에러: {e}")
+            # TODO: 에러처리 개선
+            continue
+
+    if not columns:
+        raise ValueError(f"{sheet_name}: 컬럼 없음")
+
+    #TableSpec 생성
+    return TableSpec(
+        name=sheet_name,
+        columns=columns
+    )
+
+def _parse_column(row: pd.Series) -> ColumnSpec:
+    """
+    DataFrame 행 하나 -> ColumnSpec
+
+    Args:
+        row: pandas Series
+
+    Returns:
+        ColumnSpec
+
+    TODO:
+        - [] 데이터 타입 정규화
+        - [] 기본값 파싱 개선
+        - [] NULL 체크 강화
+
+    """
+
+    # 컬럼명 (필수)
+    name = str(row["컬럼명"]).strip()
+
+    # 데이터 타입 (필수)
+    data_type = str(row["데이터타입"]).strip().upper()
+
+    # 길이 (선택)
+    length = None
+    if "길이" in row and pd.notna(row["길이"]):
+        try:
+            length = int(row["길이"])
+        except:
+            length = None
+
+    # NULL 허용 (필수)
+    nullable = str(row['NULL']).strip().upper() == "Y"
+
+    # 기본값 (선택)
+    default = None
+    if "기본값" in row and pd.notna(row["기본값"]):
+        default = str(row['기본값']).strip()
+
+    # 설명 (필수)
+    comment = str(row["설명"]).strip()
+
+    return ColumnSpec(
+        name=name,
+        data_type=data_type,
+        length=length,
+        nullable=nullable,
+        default=default,
+        comment=comment
+    )
+
+# =========================== 테스트 ===============================
+if __name__ == "__main__":
+    """
+    간단 테스트
+    
+    실행: python -m devbooster.core.parser
+    """
+
+    print("=" * 50)
+    print("Parser 테스트")
+    print("=" * 50)
+
+    # TODO: 실제 Excel 파일로 테스트
+    test_file = "examples/test_simple.xlsx"
+
+    if Path(test_file).exists():
+        tables = parse_excel(test_file)
+
+        for table in tables:
+            print(f"\n테이블: {table.name}")
+            print(f"모듈: {table.module}")
+            print(f"클래스: {table.class_name}")
+            print(f"컬럼 수: {len(table.columns)}")
+            print(f"PK: {table.pk_columns}")
+
+    else:
+        print(f"⚠️ 샘플 파일 없음: {test_file}")
+        print("-> examples/test_simple.xlsx 만들어주세요!")
+
+    print("\n"+"="*50)
