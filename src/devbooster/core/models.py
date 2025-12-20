@@ -5,8 +5,7 @@ TableSpec: 테이블 하나의 전체 정보
 ColumnSpec: 컬럼 하나의 정보
 """
 
-from dataclasses import dataclass, field, Field
-from typing import List
+from dataclasses import dataclass, field
 
 @dataclass
 class ColumnSpec:

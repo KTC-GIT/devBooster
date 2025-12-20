@@ -127,6 +127,8 @@ def _parse_column(row: pd.Series) -> ColumnSpec:
     # 컬럼명 (필수)
     name = str(row["컬럼명"]).strip()
 
+    # TODO: VARCHAR2 등은 괄호 안에 length가 포함되는 경우가 많음. 예) VARCHAR2(100)
+    #   매핑 실패할 가능성이 있으므로 추후 확인 후 fix 할 것.
     # 데이터 타입 (필수)
     data_type = str(row["데이터타입"]).strip().upper()
 
