@@ -4,10 +4,17 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
+<!-- TODO:
+- [ ] 동적 검색 쿼리 (<if> 조건)
+- [ ] 페이징 처리 (LIMIT/OFFSET)
+- [ ] 정렬 옵션
+- [ ] 조인 쿼리
+-->
+
 <mapper namespace="egovframework.{{ module }}.service.impl.{{ class_name }}Mapper">
 
     <!-- ResultMap: {{ table_name }}-->
-    <resultMap id="{{ class_name }}Result" type="{{ class_name }}VO">
+    <resultMap id="{{ class_name }}Result" type="egovframework.{{ module }}.service.{{ class_name }}VO">
         {% for col in columns %}
         <result property="{{ col.name | camel }}" column="{{ col.name }}"/>
         {% endfor %}
@@ -45,7 +52,7 @@
     </select>
 
     <!-- 등록 -->
-    <insert id="insert{{ class_name }}">
+    <insert id="insert{{ class_name }}" parameterType="egovframework.{{ module }}.service.{{ class_name }}VO">
         INSERT INTO {{ table_name }} (
         {% for col in columns %}
             {{ col.name }}{% if not loop.last %},{% endif %}
@@ -58,7 +65,7 @@
     </insert>
 
     <!-- 수정 -->
-    <update id="update{{ class_name }}">
+    <update id="update{{ class_name }}" parameterType="egovframework.{{ module }}.service.{{ class_name }}VO">
         UPDATE {{ table_name }}
         SET
         {% for col in columns if col.name not in identifier %}
@@ -70,14 +77,14 @@
 
     <!-- 삭제 -->
     {% if logical_delete %}
-    <update id="delete{{ class_name }}">
+    <update id="delete{{ class_name }}" parameterType="egovframework.{{ module }}.service.{{ class_name }}VO">
         UPDATE {{ table_name }}
         SET {% if has_use_yn %}USE_YN = 'N'{% elif has_del_yn %}DEL_YN = 'Y'{% endif %}
         WHERE {% for id_col in identifier %}{{ id_col }} = #{{ '{' }}{{ id_col | camel }}{{ '}' }}{% if not loop.last %}
         AND {% endif %}{% endfor %}
     </update>
     {% else %}
-    <delete id="delete{{ class_name }}">
+    <delete id="delete{{ class_name }}" parameterType="egovframework.{{ module }}.service.{{ class_name }}VO">
         DELETE FROM {{ table_name }}
         WHERE {% for id_col in identifier %}{{ id_col }} = #{{ '{' }}{{ id_col | camel }}{{ '}' }}{% if not loop.last %}
         AND {% endif %}{% endfor %}

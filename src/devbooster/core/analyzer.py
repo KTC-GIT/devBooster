@@ -165,8 +165,6 @@ class TableAnalyzer:
 
         # 3. 2개 복합키 후보 (간단히)
         # TODO: 더 똑똑한 조합 알고리즘
-        # TODO: 테스트 결과를 확인해보니 논리 삭제 등의 특수 컬럼의 가중치를 높이는 것도 방법.
-        #   실사용 데이터는 USE_YN으로 거르는 경우가 많이 때문.
         for i, col1 in enumerate(table.columns):
             for col2 in table.columns[i+1:]:
                 score1 = self._score_column(col1)

@@ -1,0 +1,19 @@
+# Python
+__pychache__/
+*.py[cod]
+.Python
+venv/
+*.egg-info/
+
+# 출력물
+generated/
+test_output/
+*.zip
+
+# IDE
+.idea/
+*.swp
+
+# OS
+.DS_Stroe
+Thumbs.db
