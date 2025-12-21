@@ -134,14 +134,79 @@ class TemplateRenderer:
             - [] 상속 구조
         """
 
+        # 컨텍스트 빌드
         context = self._build_context(table)
 
-        # TODO: vo.java.j2 템플릿 필요
-        # template = self.env.get_template("vo.java.j2")
-        # return template.render(context)
+        # 템플릿 렌더링
+        template = self.env.get_template("vo.java.j2")
+        return template.render(context)
 
         # 임시: 간단한 VO 생성
-        return self._generate_simple_vo(table)
+        # return self._generate_simple_vo(table)
+
+    def render_mapper_java(self, table: TableSpec) -> str:
+        """
+        Mapper.java 생성
+
+        Args:
+            table: 테이블 스펙
+
+        Returns:
+            생성된 Mapper.java 내용
+        """
+
+        context = self._build_context(table)
+
+        template = self.env.get_template("mapper.java.j2")
+        return template.render(context)
+
+    def render_service(self, table: TableSpec) -> str:
+        """
+        Service.java 생성
+
+        Args:
+            table: 테이블 스펙
+
+        Returns:
+            생성된 Service.java 내용
+        """
+
+        context = self._build_context(table)
+
+        template = self.env.get_template("service.java.j2")
+        return template.render(context)
+
+    def render_service_impl(self, table: TableSpec) -> str:
+        """
+        ServiceImpl.java 생성
+
+        Args:
+            table: 테이블 스펙
+
+        Returns:
+            생성된 ServiceImpl.java 내용
+        """
+
+        context = self._build_context(table)
+
+        template = self.env.get_template("service_impl.java.j2")
+        return template.render(context)
+
+    def render_controller(self, table: TableSpec) -> str:
+        """
+        Controller.java 생성
+
+        Args:
+            table: 테이블 스펙
+
+        Returns:
+            생성된 Controller.java 내용
+        """
+
+        context = self._build_context(table)
+
+        template = self.env.get_template("controller.java.j2")
+        return template.render(context)
 
     def _build_context(
             self,
@@ -253,7 +318,21 @@ class TemplateRenderer:
         vo_content = self.render_vo(table)
         outputs[f"{table.class_name}VO.java"] = vo_content
 
-        # TODO: Service, Controller 등 추가
+        # Mapper.java
+        mapper_java_content = self.render_mapper_java(table)
+        outputs[f"{table.class_name}Mapper.java"] = mapper_java_content
+
+        # Service.java
+        vo_service = self.render_service(table)
+        outputs[f"{table.class_name}Service.java"] = vo_service
+
+        # ServiceImpl.java
+        vo_service_impl = self.render_service_impl(table)
+        outputs[f"{table.class_name}ServiceImpl.java"] = vo_service_impl
+
+        # Controller.java
+        vo_controller = self.render_controller(table)
+        outputs[f"{table.class_name}Controller.java"] = vo_controller
 
         return outputs
 

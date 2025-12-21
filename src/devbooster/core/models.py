@@ -60,6 +60,15 @@ class ColumnSpec:
         return parts[0]+"".join(p.capitalize() for p in parts[1:])
 
     @property
+    def pascal_name(self) -> str:
+        """
+        snake_case -> PascalCase
+        NOTICE_ID -> NoticeId
+        """
+        parts = self.name.lower().split("_")
+        return "".join(p.capitalize() for p in parts)
+
+    @property
     def java_type(self) -> str:
         """
         DB 타입 -> Java 타입 매핑 (간단 버전(oracle))
