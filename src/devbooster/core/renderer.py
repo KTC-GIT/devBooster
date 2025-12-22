@@ -301,11 +301,6 @@ class TemplateRenderer:
 
         Returns:
             {파일명: 내용} 딕셔너리
-
-        TODO:
-            - [] Service 생성
-            - [] Controller 생성
-            - [] ServiceImpl 생성
         """
 
         outputs = {}
