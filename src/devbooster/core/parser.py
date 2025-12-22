@@ -143,6 +143,11 @@ def _parse_column(row: pd.Series) -> ColumnSpec:
     # NULL 허용 (필수)
     nullable = str(row['NULL']).strip().upper() == "Y"
 
+    # PK 명시 (선택)
+    explicit_pk = False
+    if 'PK' in row and pd.notna(row["PK"]):
+        explicit_pk = str(row["PK"]).strip().upper() == "Y"
+
     # 기본값 (선택)
     default = None
     if "기본값" in row and pd.notna(row["기본값"]):
@@ -151,14 +156,17 @@ def _parse_column(row: pd.Series) -> ColumnSpec:
     # 설명 (필수)
     comment = str(row["설명"]).strip()
 
-    return ColumnSpec(
+    col = ColumnSpec(
         name=name,
         data_type=data_type,
         length=length,
         nullable=nullable,
         default=default,
-        comment=comment
+        comment=comment,
+        explicit_pk=explicit_pk,
     )
+
+    return col
 
 # =========================== 테스트 ===============================
 if __name__ == "__main__":

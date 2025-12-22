@@ -19,6 +19,8 @@ class ColumnSpec:
     default: str | None     # 기본값
     comment: str            # 주석
 
+    explicit_pk: bool = False      # 명시적 PK
+
     # 자동 판단 속성
     is_pk: bool = field(default=False, init=False)
     is_special: bool = field(default=False, init=False)
@@ -32,8 +34,19 @@ class ColumnSpec:
         #  PK가 없는 경우 별도로 Identifier를 입력받아서 이 부분을 처리하도록 수정 필요
         # TODO: 2. 사용자가 입력하지 않는 경우 PK가 없는 것으로 간주. OR AI 판단 추천으로 고른다.
         #  단, AI 추천으로 고른 경우 경고문구를 반드시 붙일것.
-        if self.name.endswith("_ID"):
+        if self.explicit_pk:
+            # 명시적 PK 우선
             self.is_pk = True
+        else:
+            # 규칙기반
+            name_upper = self.name.upper()
+            # FK 패턴제외
+            fk_prefixes = ("ENTRY_","ENT_","REG_","UPT_","UPD_","MOD_","CRT_")
+            if any(name_upper.startswith(p) for p in fk_prefixes):
+                self.is_pk = False
+            # PK 패턴
+            elif name_upper.endswith(("_ID","_SEQ","_NO")):
+                self.is_pk = True
 
         # 특수 컬럼 자동 판단
         # TODO : 현재는 이렇게 쓰고.. 나중에는 직접 입력할 수 있게 하든지
