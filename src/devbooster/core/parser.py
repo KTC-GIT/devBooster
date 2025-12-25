@@ -44,8 +44,8 @@ def parse_excel(file_path: str | Path) -> list[TableSpec]:
 
     # 각 시트 처리
     for sheet_name in excel_file.sheet_names:
-        # TB_로 시작하는 시트만 처리
-        if not sheet_name.startswith("TB_"):
+
+        if not _is_valid_table_name(sheet_name):
             print(f" 건너뜀: {sheet_name}")
             continue
 
@@ -167,6 +167,31 @@ def _parse_column(row: pd.Series) -> ColumnSpec:
     )
 
     return col
+
+def _is_valid_table_name(name: str) -> bool:
+    """테이블명 유효성"""
+
+    name_upper = name.upper()
+
+    # 제외 패턴
+    exclude_suffixes = [
+        "_BAK", "_BACKUP",
+        "_TEMP", "_TMP",
+        "_OLD", "_DEL",
+        "_TEST", "_SAMPLE",
+        "_COPY", "_ARCHIVE"
+    ]
+
+    for suffix in exclude_suffixes:
+        if name_upper.endswith(suffix):
+            return False
+
+    # 날짜 패턴(_20231215,_231225)
+    import re
+    if re.search(r"_\d{6,8}$", name_upper):
+        return False
+
+    return True
 
 # =========================== 테스트 ===============================
 if __name__ == "__main__":

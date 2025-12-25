@@ -11,6 +11,14 @@
 from dataclasses import dataclass, field
 from .models import TableSpec,ColumnSpec
 
+# AI Analyzer import 안전하게
+try:
+    from .ai_analyzer import AIAnalyzer
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
+    AIAnalyzer = None
+
 @dataclass
 class TableDiagnosis:
     """테이블 진단 결과"""
@@ -21,6 +29,9 @@ class TableDiagnosis:
     identifier_candidates: list[list[str]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     risks: list[str] = field(default_factory=list)
+
+    source: str = "rules"   # "explicit", "ai", "rules"
+    ai_confidence: float | None = None # AI 신뢰도 (0-1)
 
     def __str__(self) -> str:
         """진단 결과 출력"""
@@ -54,6 +65,37 @@ class TableDiagnosis:
 class TableAnalyzer:
     """테이블 분석기"""
 
+    def __init__(self, use_ai: bool = True):
+        """
+        Args:
+             use_ai: AI 분석 사용 여부
+        """
+        print(f"🔧   TableAnalyzer 초기화 (use_ai={use_ai})")
+
+        self.use_ai = use_ai
+        self.ai_analyzer = None
+
+        # AI 초기화 (안전하게)
+        if use_ai and AI_AVAILABLE:
+            print(" AI 모듈 발견")
+            try:
+                self.ai_analyzer = AIAnalyzer()
+                print(f"    AI 인스턴스 생성: {self.ai_analyzer}")
+                print(f"    available: {self.ai_analyzer.available}")
+
+                if self.ai_analyzer.available:
+                    print("✅    AI 분석기 활성화")
+                else:
+                    print("⚠️   AI를 찾을 수 없습니다. 규칙 기반 사용")
+                    self.ai_analyzer = None
+            except Exception as e:
+                print(f"⚠️  AI 초기화 실패: {e}")
+                import traceback
+                traceback.print_exc()
+                self.ai_analyzer = None
+        elif use_ai:
+            print("⚠️   AI 모듈을 찾을 수 없습니다. 규칙 기반 사용")
+
     def analyze(self,table: TableSpec) -> TableDiagnosis:
         """
         테이블 진단
@@ -68,29 +110,110 @@ class TableAnalyzer:
             - [] 타입 일관성 체크
             - [] 네이밍 컨벤션 체크
             - [] 인덱스 제안
-
         """
 
-        # PK 검사
-        has_pk = len(table.pk_columns) > 0
-        pk_quality = self._assess_pk_quality(table)
+        # 명시적 PK 확인
+        explicit_pk = table.pk_columns
 
-        # 후보 추천
-        candidates = self._recommend_identifiers(table)
+        if explicit_pk:
+            # PK 명시됨 - 그대로 사용
+            print("PK가 명시되어 사용합니다.")
+            return TableDiagnosis(
+                table=table,
+                has_pk=True,
+                pk_quality="good",
+                identifier_candidates=[[col.name for col in explicit_pk]],
+                warnings=[],
+                risks=[],
+                source="explicit"
+            )
 
-        # 경고 생성
-        warnings = self._generate_warnings(table,has_pk)
+        # AI 분석 시도
+        if self.use_ai and self.ai_analyzer and self.ai_analyzer.available:
+            print("🤖 AI 분석 중..")
+            try:
+                ai_result = self.ai_analyzer.analyze_pk(table)
+                if ai_result and ai_result.get("confidence",0) > 0.8:
+                    print(f"✅   AI 추천: {ai_result['pk']}")
 
-        # 위험 요소
-        risks = self._detect_risks(table)
+                    # AI 결과를 is_pk에 설정
+                    for col in table.columns:
+                        if col.name in ai_result['pk']:
+                            col.is_pk = True
+
+                    return TableDiagnosis(
+                        table=table,
+                        has_pk=False,
+                        pk_quality="ai_recommended",
+                        identifier_candidates=[ai_result["pk"]],
+                        warnings=[
+                            f"🤖 AI 추천: {', '.join(ai_result['pk'])}",
+                            f"  신뢰도: {ai_result.get('confidence',0):.0%}",
+                            f"  이유: {ai_result.get('reasoning','N/A')}"
+                        ],
+                        risks=["AI 추천은 참고용입니다. 검토 후 사용하세요."],
+                        source="ai",
+                        ai_confidence=ai_result.get('confidence',0)
+                    )
+            except Exception as e:
+                print(f"⚠️  AI 분석 실패: {e}")
+
+            print("⚠️   AI 분석 실패 - 규칙 기반 사용")
+
+        # 규칙기반 풀백
+        print("📄    규칙 기반 분석...")
+        return self._analyzer_with_rules(table)
+
+    def _analyzer_with_rules(self, table: TableSpec) -> TableDiagnosis:
+        """규칙 기반 분석"""
+        pk_candidates = []
+
+        for col in table.columns:
+            name_upper = col.name.upper()
+
+            # FK 제외
+            fk_prefixes = ("ENTRY_","ENT_","REG_","UPT_","UPD_","MOD_","CRT_")
+            if any(name_upper.startswith(p) for p in fk_prefixes):
+                continue
+
+            # PK 패턴
+            if name_upper.endswith(("_ID","_SEQ","_NO")):
+                pk_candidates.append(col)
+                col.is_pk = True
+
+        if pk_candidates:
+
+            # PK 검사
+            has_pk = len(table.pk_columns) > 0
+            pk_quality = self._assess_pk_quality(table)
+
+            # 후보 추천
+            candidates = self._recommend_identifiers(table)
+
+            # 경고 생성
+            warnings = self._generate_warnings(table,has_pk)
+
+            # 위험 요소
+            risks = self._detect_risks(table)
+
+            return TableDiagnosis(
+                table=table,
+                has_pk=has_pk,
+                pk_quality=pk_quality,
+                identifier_candidates=candidates,
+                warnings=warnings,
+                risks=risks,
+                source="rules"
+            )
 
         return TableDiagnosis(
             table=table,
-            has_pk=has_pk,
-            pk_quality=pk_quality,
-            identifier_candidates=candidates,
-            warnings=warnings,
-            risks=risks,
+            has_pk=False,
+            pk_quality="none",
+            identifier_candidates=[],
+            warnings=["⚠️   PK를 찾을 수 없습니다."],
+            risks=["Excel에 PK 컬럼을 명시하세요."],
+            source="rules"
         )
 
     def _assess_pk_quality(self, table: TableSpec) -> str:
@@ -101,25 +224,28 @@ class TableAnalyzer:
             "good": PK 있고 품질 좋음
             "weak": PK 있지만 문제 있음
             "none": PK 없음
+            "poor": 형편없음
         """
+        pk_cols = table.pk_columns
 
-        if not table.pk_columns:
+        if not pk_cols:
             return "none"
 
-        # PK 컬럼들 가져오기
-        pk_cols = [col for col in table.columns if col.is_pk]
-
-        # nullable PK -> weak
-        if any(col.nullable for col in pk_cols):
+        # 단일 PK
+        if len(pk_cols) == 1:
+            col = pk_cols[0]
+            # NOT NULL이고 숫자형이면 good
+            if not col.nullable and col.data_type in ("NUMBER","INTEGER"):
+                return "good"
             return "weak"
 
         # 너무 많은 복합키 -> weak
-        if len(pk_cols) > 3:
+        if len(pk_cols) >= 3:
             return "weak"
 
         # TODO: 더 많은 품질 체크
 
-        return "good"
+        return "poor"
 
     def _recommend_identifiers(
             self,
@@ -138,15 +264,15 @@ class TableAnalyzer:
             - [] 통계 기반 추천
 
         """
-
         candidates_with_score = []
 
         # 1. PK가 있으면 그게 1순위
-        if table.pk_columns:
-
+        pk_cols = table.pk_columns
+        if pk_cols:
             candidates_with_score.append(
-                (table.pk_columns, 999 ,0)
+                ([col.name for col in pk_cols], 999, 0)
             )
+
 
         # 2. 단일 컬럼 후보
         for col in table.columns:

@@ -43,14 +43,24 @@ def cli():
     default="oracle",
     help="데이터베이스"
 )
+@click.option(
+    "--use-ai/--no-ai",
+    default=True,
+    help="AI 분석 사용"
+)
 
 
-def generate(input, output, framework, database):
+
+def generate(input, output, framework, database,use_ai):
     """
     CRUD 코드 생성
 
     Example:
+        # AI 사용 (기본)
         devbooster generate -i table.xlsx
+
+        # AI 미사용
+        devbooster generate -i table.xlsx --no-ai
     """
 
     click.echo("=" * 50)
@@ -63,7 +73,7 @@ def generate(input, output, framework, database):
     click.echo(f"✅ {len(tables)}개 테이블 발견")
 
     # 2. 분석 + 생성
-    analyzer = TableAnalyzer()
+    analyzer = TableAnalyzer(use_ai=use_ai)
     renderer = TemplateRenderer(framework, database)
     writer = FileWriter(output)
 
@@ -79,7 +89,7 @@ def generate(input, output, framework, database):
                 click.echo(f"    ⚠️ {warning}")
 
         # 코드 생성
-        identifier = diagnosis.identifier_candidates[0] if diagnosis.identifier_candidates else table.pk_columns
+        identifier = diagnosis.identifier_candidates[0] if diagnosis.identifier_candidates else [col.name for col in table.pk_columns]
         outputs = renderer.render_all(table,identifier)
 
         # 파일 저장

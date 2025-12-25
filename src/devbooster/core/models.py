@@ -37,16 +37,16 @@ class ColumnSpec:
         if self.explicit_pk:
             # 명시적 PK 우선
             self.is_pk = True
-        else:
-            # 규칙기반
-            name_upper = self.name.upper()
-            # FK 패턴제외
-            fk_prefixes = ("ENTRY_","ENT_","REG_","UPT_","UPD_","MOD_","CRT_")
-            if any(name_upper.startswith(p) for p in fk_prefixes):
-                self.is_pk = False
-            # PK 패턴
-            elif name_upper.endswith(("_ID","_SEQ","_NO")):
-                self.is_pk = True
+        # else:
+        #     # 규칙기반
+        #     name_upper = self.name.upper()
+        #     # FK 패턴제외
+        #     fk_prefixes = ("ENTRY_","ENT_","REG_","UPT_","UPD_","MOD_","CRT_")
+        #     if any(name_upper.startswith(p) for p in fk_prefixes):
+        #         self.is_pk = False
+        #     # PK 패턴
+        #     elif name_upper.endswith(("_ID","_SEQ","_NO")):
+        #         self.is_pk = True
 
         # 특수 컬럼 자동 판단
         # TODO : 현재는 이렇게 쓰고.. 나중에는 직접 입력할 수 있게 하든지
@@ -117,9 +117,28 @@ class TableSpec:
         TB_NOTICE -> notice
         TB_USER_INFO -> userinfo
         """
-        if self.name.startswith("TB_"):
-            return self.name[3:].lower()
-        return self.name.lower()
+        name = self.name
+        name_len = len(self.name)
+
+        # 접두사 제거
+        prefixes = [
+            "TB_", "TBL_",
+            "TM_","TD_","TC_"
+        ]
+
+        for prefix in prefixes:
+            if name.startswith(prefix):
+                name = name[len(prefix):]
+                break
+
+        parts = name.lower().split("_")
+
+        if name_len == len(name):
+            if len(parts[0]) == 1:
+                name = "".join(parts[1:])
+
+        return name
+
 
     @property
     def class_name(self) -> str:
@@ -128,16 +147,22 @@ class TableSpec:
         TB_NOTICE -> Notice
         TB_USER_INFO -> UserInfo
         """
-        name_without_prefix = (
-            self.name[3:] if self.name.startswith("TB_") else self.name
-        )
-        parts = name_without_prefix.split("_")
-        return "".join(p.capitalize() for p in parts)
+        module = self.module
+
+        if not module:
+            return  "Unknown"
+        return module[0].upper()+module[1:]
+
 
     @property
-    def pk_columns(self) -> list[str]:
+    def explicit_pk_columns(self) -> list[ColumnSpec]:
+        """명시적 PK만"""
+        return [col for col in self.columns if col.explicit_pk]
+
+    @property
+    def pk_columns(self) -> list[ColumnSpec]:
         """PK 컬럼명 목록"""
-        return [col.name for col in self.columns if col.is_pk]
+        return [col for col in self.columns if col.is_pk]
 
     @property
     def pk_camel_names(self) -> list[str]:
