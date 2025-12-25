@@ -9,6 +9,7 @@ Excel 파일 -> TableSpec 변환
 """
 
 import pandas as pd
+import re
 from pathlib import Path
 from .models import TableSpec, ColumnSpec
 
@@ -169,27 +170,30 @@ def _parse_column(row: pd.Series) -> ColumnSpec:
     return col
 
 def _is_valid_table_name(name: str) -> bool:
-    """테이블명 유효성"""
+    """
+    테이블명 유효성
+
+    제외 대상:
+        - 백업/입시/테스트 테이블 (접두사/접미사)
+        - 날짜 패턴이 붙은 테이블
+    """
 
     name_upper = name.upper()
 
-    # 제외 패턴
-    exclude_suffixes = [
-        "_BAK", "_BACKUP",
-        "_TEMP", "_TMP",
-        "_OLD", "_DEL",
-        "_TEST", "_SAMPLE",
-        "_COPY", "_ARCHIVE"
+    # 임시 테이블 패턴 (정규식으로 통합)
+    temp_patterns = [
+        # 접미사: _BAK, _TEMP 등
+        r"_(BAK|BACKUP|TEMP|TMP|OLD|DEL|TEST|SAMPLE|COPY|ARCHIVE)$",
+        # 접두사: TEMP_, TMP_ 등
+        r"^(TEMP|TMP|BACK|BAK|BACKUP|TEST|SAMPLE|COPY|ARCHIVE|OLD|DEL))_",
+        # 날짜 패턴
+        r"_\d{6,8}$",       # 끝: _20251225
+        r"^\d{6,8}_",       # 시작: 20251225_
     ]
 
-    for suffix in exclude_suffixes:
-        if name_upper.endswith(suffix):
+    for pattern in temp_patterns:
+        if re.search(pattern, name_upper):
             return False
-
-    # 날짜 패턴(_20231215,_231225)
-    import re
-    if re.search(r"_\d{6,8}$", name_upper):
-        return False
 
     return True
 
