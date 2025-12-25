@@ -9,9 +9,12 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 import shutil
+import os
+import requests
 from pathlib import Path
 
 from pip._internal.utils import temp_dir
+from pydantic import BaseModel
 
 from ..core.parser import parse_excel
 from ..core.analyzer import TableAnalyzer
@@ -28,13 +31,33 @@ app = FastAPI(
 )
 
 # CORS 설정
+# 브라우저에게 내가 허용한 거라고 알려주는 설정
 app.add_middleware(
     CORSMiddleware,
+    # 누구를 들여보낼지?
+    # ["*"] = 모두에게 다 허용
+    # 실무에서는 특정 ["IP:PORT"] 로 특정함.
     allow_origins=["*"],
+
+    # 쿠키나 인증정보를 받을지
+    # True = ㅇㅇ 받아도 됨. (로그인 유지 등에 필요)
     allow_credentials=True,
+
+    # 어떤 행동을 허락할지
+    # ["*"] = GET, POST, PUT, DELETE, PATCH, OPTIONS .. 다 해!
     allow_methods=["*"],
+
+    # 어떤 헤더를 허락할지
+    # ["*"] = Content-Type, Authorization, X-Process-Time .. 아무거나 다 보내!
     allow_headers=["*"],
 )
+
+# K8s YAML에서 설정한 환경변수 가져오기 (없으면 기본값)
+OLLAMA_HOST = os.getenv("OLLAMA_HOST","http://localhost:11434")
+
+class ChatRequest(BaseModel):
+    model: str = "qwen2.5-coder:14B"
+    prompt: str
 
 def cleanup_temp_dir(temp_dir: Path):
     """임시 디렉토리 정리 (백그라운드)"""
@@ -66,6 +89,31 @@ def root():
 def health():
     """헬스 체크 (K8s용)"""
     return {"status": "ok"}
+
+@app.get("/ollama/check")
+def ollama_check():
+    return {"status": "alive", "ollama_host": OLLAMA_HOST}
+
+@app.post("/ask")
+def ask_ai(request: ChatRequest):
+    try:
+        # Ollama API 호출 (Generate EndPoint)
+        payload = {
+            "model": request.model,
+            "prompt": request.prompt,
+            "stream": False
+        }
+
+        # 호스트 PC의 Ollama로 요청 발사!
+        response = requests.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=60)
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.exceptions.ConnectionError:
+        raise HTTPException(status_code=500, detail=f"Ollama({OLLAMA_HOST})에 연결할 수 없습니다. 호스트 설정을 확인하세요.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/generate")
 async def generate(

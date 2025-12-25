@@ -1,0 +1,14 @@
+#service-ai.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: devbooster-svc
+spec:
+  #  어떤 놈들을 묶을 것인지 (Deployment 라벨이랑 같아야 함)
+  selector:
+    app: devbooster-ai
+  ports:
+    - protocol: TCP
+      port: 80            # 서비스가 노출할 포트 (내부용)
+      targetPort: 5000    # 실제 파이썬 앱이 떠 있는 포트
+  type: ClusterIP         # 클러스터 내부 전용 IP 할당

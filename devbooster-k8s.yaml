@@ -1,0 +1,41 @@
+# devbooster-k8s-yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devbooster-ai
+  labels:
+    app: devbooster-ai
+spec:
+  replicas: 3   # 똥컴아니니 넉넉히 3개 띄웁시다 시발롬들..
+  selector:
+    matchLabels:
+      app: devbooster-ai
+  template:
+    metadata:
+      labels:
+        app: devbooster-ai
+    spec:
+      containers:
+        - name: ai-api
+          image: crazybeerdwarf/devbooster-ai:v1.9
+          # [핵심] 이거 없으면 인터넷에서 다운받으려고 시도하다가 에러남!
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          # [미래 대비] 나중에 호스트의 Ollama랑 통신할 때 필요함
+          env:
+            - name: OLLAMA_HOST
+              value: "http://host.docker.internal:11434"
+          # 안정성 체감에 좋음: 살아있나 체크
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
