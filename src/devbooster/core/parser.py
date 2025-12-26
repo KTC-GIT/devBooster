@@ -11,6 +11,8 @@ Excel 파일 -> TableSpec 변환
 import pandas as pd
 import re
 from pathlib import Path
+
+from devbooster.config.config_loader import get_table_patterns, get_table_whitelist
 from .models import TableSpec, ColumnSpec
 
 def parse_excel(file_path: str | Path) -> list[TableSpec]:
@@ -173,25 +175,30 @@ def _is_valid_table_name(name: str) -> bool:
     """
     테이블명 유효성
 
-    제외 대상:
-        - 백업/입시/테스트 테이블 (접두사/접미사)
-        - 날짜 패턴이 붙은 테이블
+    순서:
+        1. 화이트리스트 체크 (우선순위 최상위)
+        2. 제외 패턴 체크
+
+    Args:
+        name: 테이블명
+
+    Returns:
+        bool: 유효하면 True, 제외대상이면 False
     """
 
     name_upper = name.upper()
 
-    # 임시 테이블 패턴 (정규식으로 통합)
-    temp_patterns = [
-        # 접미사: _BAK, _TEMP 등
-        r"_(BAK|BACKUP|TEMP|TMP|OLD|DEL|TEST|SAMPLE|COPY|ARCHIVE)$",
-        # 접두사: TEMP_, TMP_ 등
-        r"^(TEMP|TMP|BACK|BAK|BACKUP|TEST|SAMPLE|COPY|ARCHIVE|OLD|DEL))_",
-        # 날짜 패턴
-        r"_\d{6,8}$",       # 끝: _20251225
-        r"^\d{6,8}_",       # 시작: 20251225_
-    ]
+    # 화이트 리스트 체크 (리스트에 있으면 무조건 허용)
+    whitelist = get_table_whitelist()
+    for pattern in whitelist:
+        if re.search(pattern, name_upper):
+            return True
 
-    for pattern in temp_patterns:
+
+    # 제외 테이블 패턴
+    exclude_patterns = get_table_patterns()
+
+    for pattern in exclude_patterns:
         if re.search(pattern, name_upper):
             return False
 
