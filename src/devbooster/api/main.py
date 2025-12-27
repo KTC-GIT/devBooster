@@ -56,7 +56,7 @@ app.add_middleware(
 OLLAMA_HOST = os.getenv("OLLAMA_HOST","http://localhost:11434")
 
 class ChatRequest(BaseModel):
-    model: str = "qwen2.5-coder:14B"
+    model: str = "qwen2.5-coder:7B"
     prompt: str
 
 def cleanup_temp_dir(temp_dir: Path):

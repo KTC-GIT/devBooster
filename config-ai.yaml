@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devbooster-config
+data:
+  # 여기에 key-value로 설정 몰아넣기
+  OLLAMA_HOST: "http://host.docker.internal:11434"
+  MODEL_NAME: "qwen2.5-coder:7B"
