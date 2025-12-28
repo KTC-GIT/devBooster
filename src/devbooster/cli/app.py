@@ -11,8 +11,11 @@ from ..core.analyzer import TableAnalyzer
 from ..core.renderer import TemplateRenderer
 from ..core.writer import FileWriter
 
+from devbooster import __version__
+
 
 @click.group()
+@click.version_option(version=__version__, prog_name="DevBooster")
 def cli():
     """DevBooster - CRUD 코드 생성기"""
     pass

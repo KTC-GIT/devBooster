@@ -1,9 +1,20 @@
 # Python
-__pychache__/
+__pycache__/
 *.py[cod]
+*$py.class
 .Python
 venv/
+env/
 *.egg-info/
+*.egg
+.eggs/
+
+# 빌드/배포 (추가!)
+dist/*
+build/*
+*.whl
+*.tar.gz
+.pypirc
 
 # 출력물
 generated/
@@ -12,8 +23,21 @@ test_output/
 
 # IDE
 .idea/
+.vscode/
 *.swp
+*.swo
 
 # OS
-.DS_Stroe
+.DS_Store
 Thumbs.db
+
+# 테스트
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 로컬 설정
+.env
+.env.local
+
+*.backup

@@ -4,32 +4,7 @@ import os
 from pathlib import Path
 
 
-# 프로젝트 루트 찾기
-def get_project_root() -> Path:
-    """프로젝트 루트 디렉토리 찾기"""
-
-    # 환경 변수 우선
-    if env_root := os.getenv("DEVBOOSTER_ROOT"):
-        return Path(env_root)
-
-    # 현재 파일 기준 (config_loader.py -> config -> devbooster -> src -> 프로젝트 루트)
-    current_file = Path(__file__).resolve()
-    project_root = current_file.parent.parent.parent.parent
-
-    # 검증: config/ 폴더 존재 확인
-    if (project_root / "config").exists():
-        return project_root
-
-    # 실패 시 에러
-    raise FileNotFoundError(
-        f"프로젝트 루트를 찾을 수 없습니다.\n"
-        f"현재 파일: {current_file}\n"
-        f"추정 루트: {project_root}\n"
-        f"config 폴더가 {project_root / 'config'}에 없습니다."
-    )
-
-PROJECT_ROOT = get_project_root()
-CONFIG_DIR = PROJECT_ROOT / "config"
+CONFIG_DIR = Path(__file__).parent / "config_data"
 
 def load_patterns_from_file(filename: str) -> list[str]:
     """
